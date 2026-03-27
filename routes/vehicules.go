@@ -82,7 +82,7 @@ func (e *Env) AjouterVehicule(w http.ResponseWriter, r *http.Request) {
 
 
 	// C. Insertion en DB
-	query := `INSERT INTO vehicules (model, description, price, imageurl) VALUES ($1, $2, $3, $4)`
+	query := `INSERT INTO vehicules (model, description, price, imagesurl) VALUES ($1, $2, $3, $4)`
 	_, err = e.DB.Exec(query, name, desc, price, imageURL)
 
 	if err != nil {
