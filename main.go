@@ -11,6 +11,7 @@ import (
 	"github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/service/s3"
 	"github.com/cccLUCASccc/Centra-API/routes"
+	"github.com/aws/aws-sdk-go-v2/credentials"
 
 	_ "github.com/lib/pq"
 )
@@ -32,6 +33,12 @@ func main() {
 	endpointURL := os.Getenv("AWS_ENDPOINT_URL")
 	region := os.Getenv("AWS_DEFAULT_REGION")
 
+	creds := credentials.NewStaticCredentialsProvider(
+        os.Getenv("AWS_ACCESS_KEY_ID"),
+        os.Getenv("AWS_SECRET_ACCESS_KEY"),
+        "",
+    )
+
 	log.Printf("DÉMARRAGE - Bucket: %s | Endpoint: %s", bucketName, endpointURL)
 
 	if bucketName == "" || endpointURL == "" {
@@ -41,6 +48,7 @@ func main() {
 	// 3. Créer la config AWS
 	cfg, err := config.LoadDefaultConfig(context.TODO(),
 		config.WithRegion(region),
+		config.WithCredentialsProvider(creds),
 	)
 	if err != nil {
 		log.Fatal("Erreur config AWS:", err)
