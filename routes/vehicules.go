@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"os"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/aws/aws-sdk-go-v2/service/s3"
@@ -39,6 +40,7 @@ func (e *Env) ListeVehicules(w http.ResponseWriter, r *http.Request) {
     defer rows.Close()
 
     var catalogue []models.Vehicule
+    
     for rows.Next() {
         var v models.Vehicule
         err := rows.Scan(&v.ID, &v.Model, &v.Description, &v.Price, &v.Sold, &v.Year, pq.Array(&v.Images))
@@ -48,9 +50,31 @@ func (e *Env) ListeVehicules(w http.ResponseWriter, r *http.Request) {
         }
         catalogue = append(catalogue, v)
     }
+
+    presignClient := s3.NewPresignClient(e.S3Client)
+
+    for i := range catalogue {
+        for j, url := range catalogue[i].Images {
+            key := extractKeyFromURL(url) 
+
+            presignedReq, err := presignClient.PresignGetObject(r.Context(), &s3.GetObjectInput{
+                Bucket: &e.Bucket,
+                Key:    &key,
+            }, s3.WithPresignExpires(24 * time.Hour))
+
+            if err == nil {
+                catalogue[i].Images[j] = presignedReq.URL
+            }
+        }
+    }
     
     w.Header().Set("Content-Type", "application/json")
     json.NewEncoder(w).Encode(catalogue)
+}
+
+func extractKeyFromURL(fullURL string) string {
+    parts := strings.Split(fullURL, "/")
+    return parts[len(parts)-1]
 }
 
 // 2. AJOUTER UN VÉHICULE + IMAGE
