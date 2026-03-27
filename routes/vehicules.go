@@ -41,7 +41,7 @@ func (e *Env) ListeVehicules(w http.ResponseWriter, r *http.Request) {
     var catalogue []models.Vehicule
     for rows.Next() {
         var v models.Vehicule
-        err := rows.Scan(&v.ID, &v.Name, &v.Description, &v.Price, &v.Sold, &v.Year, pq.Array(&v.Images))
+        err := rows.Scan(&v.ID, &v.Model, &v.Description, &v.Price, &v.Sold, &v.Year, pq.Array(&v.Images))
         if err != nil {
             log.Printf("Erreur Scan: %v", err)
             continue
@@ -58,7 +58,7 @@ func (e *Env) AjouterVehicule(w http.ResponseWriter, r *http.Request) {
     r.ParseMultipartForm(10 << 20)
 
     // 2. Récupérer les données texte
-    name := r.FormValue("name")
+    model := r.FormValue("model")
     desc := r.FormValue("description")
     price, _ := strconv.ParseFloat(r.FormValue("price"), 64)
     year := r.FormValue("year")
@@ -67,7 +67,7 @@ func (e *Env) AjouterVehicule(w http.ResponseWriter, r *http.Request) {
     queryVehicule := `INSERT INTO vehicules (model, description, price, year) 
                       VALUES ($1, $2, $3, $4) RETURNING id`
     
-    err := e.DB.QueryRow(queryVehicule, name, desc, price, year).Scan(&vehiculeID)
+    err := e.DB.QueryRow(queryVehicule, model, desc, price, year).Scan(&vehiculeID)
     if err != nil {
         log.Printf("Erreur SQL Vehicule: %v", err)
         http.Error(w, "Erreur insertion véhicule", 500)
