@@ -63,8 +63,11 @@ func (e *Env) AjouterVehicule(w http.ResponseWriter, r *http.Request) {
 			Body:   file,
 		})
 
-		if err == nil {
+		if err != nil {
+			log.Printf("ERREUR UPLOAD S3 : %v", err)
+		} else {
 			imageURL = fmt.Sprintf("%s/%s/%s", os.Getenv("AWS_ENDPOINT_URL"), e.Bucket, fileName)
+			log.Printf("UPLOAD RÉUSSI : %s", imageURL)
 		}
 	}
 
