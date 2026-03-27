@@ -7,4 +7,5 @@ type Vehicule struct {
 	Price       int    `json:"price"`
 	Sold        bool   `json:"sold"`
 	Year        int    `json:"year"`
+	ImageURL    string `json:"imageurl"`
 }

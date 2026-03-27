@@ -1,39 +1,57 @@
 package main
 
 import (
-	"github.com/cccLUCASccc/Centra-API/routes"
-	"database/sql"
-	"log"
-	"net/http"
-	"os"
+    "context"
+    "database/sql"
+    "log"
+    "net/http"
+    "os"
 
-	_ "github.com/lib/pq"
+    "github.com/aws/aws-sdk-go-v2/aws"
+    "github.com/aws/aws-sdk-go-v2/config"
+    "github.com/aws/aws-sdk-go-v2/service/s3"
+    "github.com/cccLUCASccc/Centra-API/routes"
+
+    _ "github.com/lib/pq"
 )
 
-// Notre modèle basé sur ta capture d'écran
-
-
 func main() {
-	// Connexion à la DB via Railway
-	dsn := os.Getenv("DATABASE_URL")
-	var err error
-	db, err := sql.Open("postgres", dsn)
+    // 1. Connexion DB
+    dsn := os.Getenv("DATABASE_URL")
+    db, err := sql.Open("postgres", dsn)
+    if err != nil {
+        log.Fatal("Erreur connexion DB:", err)
+    }
 
-	api := &routes.Env{DB: db}
-
+    // 2. Configuration S3
+	cfg, err := config.LoadDefaultConfig(context.TODO(),
+		config.WithRegion(os.Getenv("AWS_DEFAULT_REGION")),
+	)
 	if err != nil {
-		log.Fatal(err)
+		log.Fatal("Erreur config AWS:", err)
 	}
 
-	// Définition de la première route
-	http.HandleFunc("/api/vehicules", api.ListeVehicules)
+	s3Client := s3.NewFromConfig(cfg, func(o *s3.Options) {
+		o.BaseEndpoint = aws.String(os.Getenv("AWS_ENDPOINT_URL"))
+		o.UsePathStyle = true 
+	})
+    
+    // 3. Initialisation de l'environnement des routes
+    api := &routes.Env{
+        DB:       db,
+        S3Client: s3Client,
+        Bucket:   os.Getenv("AWS_S3_BUCKET_NAME"),
+    }
 
-	// Lancement du serveur sur le port fourni par Railway
-	port := os.Getenv("PORT")
-	if port == "" {
-		port = "8080"
-	}
-	log.Printf("Serveur démarré sur le port %s", port)
-	log.Fatal(http.ListenAndServe(":"+port, nil))
+    // Routes
+    http.HandleFunc("/api/vehicules", api.ListeVehicules)
+	http.HandleFunc("/api/vehicules/add", api.AjouterVehicule)
+   	
+	// Lancement
+    port := os.Getenv("PORT")
+    if port == "" {
+        port = "8080"
+    }
+    log.Printf("Serveur démarré sur le port %s", port)
+    log.Fatal(http.ListenAndServe(":"+port, nil))
 }
-
