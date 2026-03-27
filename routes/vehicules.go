@@ -91,6 +91,7 @@ func (e *Env) AjouterVehicule(w http.ResponseWriter, r *http.Request) {
             Bucket: &e.Bucket,
             Key:    &fileName,
             Body:   file,
+			ACL:    "public-read",
         })
         file.Close()
 
