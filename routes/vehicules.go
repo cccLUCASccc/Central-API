@@ -80,10 +80,11 @@ func (e *Env) AjouterVehicule(w http.ResponseWriter, r *http.Request) {
 	}
 	price := float64(pricefloat)
 
+	year := r.FormValue("year")
 
 	// C. Insertion en DB
-	query := `INSERT INTO vehicules (model, description, price, imagesurl) VALUES ($1, $2, $3, $4)`
-	_, err = e.DB.Exec(query, name, desc, price, imageURL)
+	query := `INSERT INTO vehicules (model, description, price, imagesurl, year) VALUES ($1, $2, $3, $4, $5)`
+	_, err = e.DB.Exec(query, name, desc, price, imageURL, year)
 
 	if err != nil {
 		log.Printf("DÉTAIL ERREUR SQL : %v", err) 
