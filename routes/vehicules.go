@@ -52,15 +52,14 @@ func (e *Env) AjouterVehicule(w http.ResponseWriter, r *http.Request) {
 	file, header, err := r.FormFile("image")
 	var imageURL string
 
+	log.Printf("Tentative d'upload - Bucket utilisé: %s", e.Bucket)
+
 	if err != nil {
-		log.Printf("ERREUR: Le champ 'image' est manquant dans Postman: %v", err)
+		log.Printf("ÉCHEC: Le fichier n'a pas été reçu. Erreur: %v", err)
 	} else {
 		defer file.Close()
-		
-		// Génération du nom de fichier
 		fileName := fmt.Sprintf("%d-%s", time.Now().Unix(), header.Filename)
 
-		// Upload vers S3
 		_, err = e.S3Client.PutObject(r.Context(), &s3.PutObjectInput{
 			Bucket: &e.Bucket,
 			Key:    &fileName,
@@ -68,10 +67,11 @@ func (e *Env) AjouterVehicule(w http.ResponseWriter, r *http.Request) {
 		})
 
 		if err != nil {
-			log.Printf("ERREUR CRITIQUE S3 : %v", err)
+			log.Printf("ÉCHEC CRITIQUE S3: %v", err)
 		} else {
-			imageURL = fmt.Sprintf("%s/%s/%s", os.Getenv("AWS_ENDPOINT_URL"), e.Bucket, fileName)
-			log.Printf("SUCCÈS : Image uploadée avec l'URL : %s", imageURL)
+			endpoint := os.Getenv("AWS_ENDPOINT_URL")
+			imageURL = fmt.Sprintf("%s/%s/%s", endpoint, e.Bucket, fileName)
+			log.Printf("RÉUSSITE: URL générée = %s", imageURL)
 		}
 	}
 
