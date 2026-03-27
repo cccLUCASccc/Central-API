@@ -86,7 +86,8 @@ func (e *Env) AjouterVehicule(w http.ResponseWriter, r *http.Request) {
 	_, err = e.DB.Exec(query, name, desc, price, imageURL)
 
 	if err != nil {
-		http.Error(w, "Erreur insertion DB", 500)
+		log.Printf("DÉTAIL ERREUR SQL : %v", err) 
+		http.Error(w, fmt.Sprintf("Erreur SQL : %v", err), 500)
 		return
 	}
 
