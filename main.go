@@ -46,7 +46,7 @@ func main() {
 func listeVehicules(response http.ResponseWriter, request *http.Request) {
 	response.Header().Set("Content-Type", "application/json")
 
-	rows, err := db.Query("SELECT id, \"Name\", \"Description\", \"Price\", \"Sold\", \"Year\" FROM \"Vehicules\"")
+	rows, err := db.Query("SELECT id, model, description, price, sold, year FROM vehicules")
 	if err != nil {
 		http.Error(response, "Erreur lors de la lecture des données", 500)
 		return
