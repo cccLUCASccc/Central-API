@@ -12,6 +12,7 @@ import (
 
 	"github.com/aws/aws-sdk-go-v2/service/s3"
 	"github.com/cccLUCASccc/Centra-API/models"
+	"github.com/lib/pq"
 )
 
 type Env struct {
@@ -21,83 +22,87 @@ type Env struct {
 }
 
 // 1. LISTER LES VÉHICULES
-func (e *Env) ListeVehicules(response http.ResponseWriter, request *http.Request) {
-	response.Header().Set("Content-Type", "application/json")
+func (e *Env) ListeVehicules(w http.ResponseWriter, r *http.Request) {
+    query := `
+        SELECT v.id, v.model, v.description, v.price, v.sold, v.year, 
+               COALESCE(array_agg(vi.url) FILTER (WHERE vi.url IS NOT NULL), '{}')
+        FROM vehicules v
+        LEFT JOIN vehicule_images vi ON v.id = vi.vehicule_id
+        GROUP BY v.id`
 
-	rows, err := e.DB.Query("SELECT id, model, description, price, sold, year, imagesurl FROM vehicules")
-	if err != nil {
-		http.Error(response, "Erreur lors de la lecture des données", 500)
-		return
-	}
-	defer rows.Close()
+    rows, err := e.DB.Query(query)
+    if err != nil {
+        log.Printf("Erreur Query: %v", err)
+        http.Error(w, "Erreur lecture DB", 500)
+        return
+    }
+    defer rows.Close()
 
-	var catalogue []models.Vehicule
-	for rows.Next() {
-		var v models.Vehicule
-		err := rows.Scan(&v.ID, &v.Name, &v.Description, &v.Price, &v.Sold, &v.Year, &v.ImageURL)
-		if err != nil {
-			log.Println("Erreur de scan :", err)
-			continue
-		}
-		catalogue = append(catalogue, v)
-	}
-	json.NewEncoder(response).Encode(catalogue)
+    var catalogue []models.Vehicule
+    for rows.Next() {
+        var v models.Vehicule
+        err := rows.Scan(&v.ID, &v.Name, &v.Description, &v.Price, &v.Sold, &v.Year, pq.Array(&v.Images))
+        if err != nil {
+            log.Printf("Erreur Scan: %v", err)
+            continue
+        }
+        catalogue = append(catalogue, v)
+    }
+    
+    w.Header().Set("Content-Type", "application/json")
+    json.NewEncoder(w).Encode(catalogue)
 }
 
 // 2. AJOUTER UN VÉHICULE + IMAGE
 func (e *Env) AjouterVehicule(w http.ResponseWriter, r *http.Request) {
-	r.ParseMultipartForm(10 << 20)
+    r.ParseMultipartForm(10 << 20)
 
-	// A. Récupérer le fichier
-	file, header, err := r.FormFile("image")
-	var imageURL string
+    // 2. Récupérer les données texte
+    name := r.FormValue("name")
+    desc := r.FormValue("description")
+    price, _ := strconv.ParseFloat(r.FormValue("price"), 64)
+    year := r.FormValue("year")
 
-	log.Printf("Tentative d'upload - Bucket utilisé: %s", e.Bucket)
+    var vehiculeID int
+    queryVehicule := `INSERT INTO vehicules (model, description, price, year) 
+                      VALUES ($1, $2, $3, $4) RETURNING id`
+    
+    err := e.DB.QueryRow(queryVehicule, name, desc, price, year).Scan(&vehiculeID)
+    if err != nil {
+        log.Printf("Erreur SQL Vehicule: %v", err)
+        http.Error(w, "Erreur insertion véhicule", 500)
+        return
+    }
 
-	if err != nil {
-		log.Printf("ÉCHEC: Le fichier n'a pas été reçu. Erreur: %v", err)
-	} else {
-		defer file.Close()
-		fileName := fmt.Sprintf("%d-%s", time.Now().Unix(), header.Filename)
+    // 4. RÉCUPÉRER TOUTES LES IMAGES
+    files := r.MultipartForm.File["image"]
+    endpoint := os.Getenv("AWS_ENDPOINT_URL")
 
-		_, err = e.S3Client.PutObject(r.Context(), &s3.PutObjectInput{
-			Bucket: &e.Bucket,
-			Key:    &fileName,
-			Body:   file,
-		})
+    for _, header := range files {
+        file, err := header.Open()
+        if err != nil {
+            continue
+        }
 
-		if err != nil {
-			log.Printf("ÉCHEC CRITIQUE S3: %v", err)
-		} else {
-			endpoint := os.Getenv("AWS_ENDPOINT_URL")
-			imageURL = fmt.Sprintf("%s/%s/%s", endpoint, e.Bucket, fileName)
-			log.Printf("RÉUSSITE: URL générée = %s", imageURL)
-		}
-	}
+        fileName := fmt.Sprintf("%d-%s", time.Now().Unix(), header.Filename)
 
-	// B. Récupérer les données texte
-	name := r.FormValue("name")
-	desc := r.FormValue("description")
+        // Upload vers S3
+        _, err = e.S3Client.PutObject(r.Context(), &s3.PutObjectInput{
+            Bucket: &e.Bucket,
+            Key:    &fileName,
+            Body:   file,
+        })
+        file.Close()
 
-	pricestr := r.FormValue("price")
-	pricefloat, err := strconv.ParseFloat(pricestr, 64)
-	if err != nil {
-		log.Println("Erreur conversion prix :", err)
-		pricefloat = 0.0
-	}
-	price := float64(pricefloat)
+        if err == nil {
+            imageURL := fmt.Sprintf("%s/%s/%s", endpoint, e.Bucket, fileName)
+            _, err = e.DB.Exec("INSERT INTO vehicule_images (vehicule_id, url) VALUES ($1, $2)", vehiculeID, imageURL)
+            if err != nil {
+                log.Printf("Erreur SQL Image: %v", err)
+            }
+        }
+    }
 
-	year := r.FormValue("year")
-
-	// C. Insertion en DB
-	query := `INSERT INTO vehicules (model, description, price, imagesurl, year) VALUES ($1, $2, $3, $4, $5)`
-	_, err = e.DB.Exec(query, name, desc, price, imageURL, year)
-
-	if err != nil {
-		log.Printf("DÉTAIL ERREUR SQL : %v", err) 
-		http.Error(w, fmt.Sprintf("Erreur SQL : %v", err), 500)
-		return
-	}
-
-	w.WriteHeader(http.StatusCreated)
+    w.WriteHeader(http.StatusCreated)
+    json.NewEncoder(w).Encode(map[string]string{"message": "Véhicule et images ajoutés !"})
 }
