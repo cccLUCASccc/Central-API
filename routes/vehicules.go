@@ -24,7 +24,7 @@ type Env struct {
 func (e *Env) ListeVehicules(response http.ResponseWriter, request *http.Request) {
 	response.Header().Set("Content-Type", "application/json")
 
-	rows, err := e.DB.Query("SELECT id, model, description, price, sold, year, imageurl FROM vehicules")
+	rows, err := e.DB.Query("SELECT id, model, description, price, sold, year, imagesurl FROM vehicules")
 	if err != nil {
 		http.Error(response, "Erreur lors de la lecture des données", 500)
 		return
