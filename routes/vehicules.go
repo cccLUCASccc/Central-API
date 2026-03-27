@@ -7,6 +7,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"strconv"
 	"time"
 
 	"github.com/aws/aws-sdk-go-v2/service/s3"
@@ -70,7 +71,15 @@ func (e *Env) AjouterVehicule(w http.ResponseWriter, r *http.Request) {
 	// B. Récupérer les données texte
 	name := r.FormValue("name")
 	desc := r.FormValue("description")
-	price := r.FormValue("price")
+
+	pricestr := r.FormValue("price")
+	pricefloat, err := strconv.ParseFloat(pricestr, 64)
+	if err != nil {
+		log.Println("Erreur conversion prix :", err)
+		pricefloat = 0.0
+	}
+	price := float64(pricefloat)
+
 
 	// C. Insertion en DB
 	query := `INSERT INTO vehicules (model, description, price, imageurl) VALUES ($1, $2, $3, $4)`
