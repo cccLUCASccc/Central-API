@@ -1,4 +1,4 @@
-package projets
+package routes
 
 import (
 	"database/sql"
