@@ -68,6 +68,9 @@ func main() {
 	}
 
 	// Routes
+	http.HandleFunc("/ping", func(w http.ResponseWriter, r *http.Request) {
+		w.Write([]byte("Le serveur est bien à jour ! 🚀"))
+	})
 	http.HandleFunc("/api/vehicules", api.ListeVehicules)
 	http.HandleFunc("/api/vehicules/add", api.AjouterVehicule)
 	http.HandleFunc("/api/projects/add", api.AjouterProjet)
