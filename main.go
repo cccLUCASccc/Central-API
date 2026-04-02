@@ -70,6 +70,7 @@ func main() {
 	// Routes
 	http.HandleFunc("/api/vehicules", api.ListeVehicules)
 	http.HandleFunc("/api/vehicules/add", api.AjouterVehicule)
+	http.HandleFunc("/api/projects", api.AjouterProjet)
 
 	// Lancement
 	port := os.Getenv("PORT")
