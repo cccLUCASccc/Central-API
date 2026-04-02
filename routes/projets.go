@@ -13,6 +13,13 @@ import (
 	"github.com/lib/pq"
 )
 
+type Projet struct {
+    ID          int      `json:"id"`
+    Name        string   `json:"name"`
+    Description string   `json:"description"`
+    Images      []string `json:"images"` 
+    Status      string   `json:"status"`
+}
 
 // 1. LISTER LES projets
 func (e *Env) ListeProjets(w http.ResponseWriter, r *http.Request) {
@@ -31,10 +38,10 @@ func (e *Env) ListeProjets(w http.ResponseWriter, r *http.Request) {
 	}
 	defer rows.Close()
 
-	listeDeProjets := []models.Projet{}
+	listeDeProjets := []Projet{}
 
 	for rows.Next() {
-		var p models.Projet
+		var p Projet
 		// Utilise pq.Array pour le tableau d'images
 		err := rows.Scan(&p.ID, &p.Name, &p.Description, &p.Status, pq.Array(&p.Images))
 		if err != nil {

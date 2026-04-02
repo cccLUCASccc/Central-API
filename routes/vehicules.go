@@ -22,6 +22,16 @@ type Env struct {
 	Bucket   string
 }
 
+type Vehicule struct {
+	ID          int    `json:"id"`
+	Model        string `json:"model"`
+	Description string `json:"description"`
+	Price       float64    `json:"price"`
+	Sold        bool   `json:"sold"`
+	Year        int    `json:"year"`
+	Images    []string `json:"images"`
+}
+
 // 1. LISTER LES VÉHICULES
 func (e *Env) ListeVehicules(w http.ResponseWriter, r *http.Request) {
     query := `
@@ -39,10 +49,10 @@ func (e *Env) ListeVehicules(w http.ResponseWriter, r *http.Request) {
     }
     defer rows.Close()
 
-    var catalogue []models.Vehicule
+    var catalogue []Vehicule
     
     for rows.Next() {
-        var v models.Vehicule
+        var v Vehicule
         err := rows.Scan(&v.ID, &v.Model, &v.Description, &v.Price, &v.Sold, &v.Year, pq.Array(&v.Images))
         if err != nil {
             log.Printf("Erreur Scan: %v", err)
