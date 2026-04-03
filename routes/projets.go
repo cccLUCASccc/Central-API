@@ -8,7 +8,6 @@ import (
 	"os"
 	"time"
 
-	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/service/s3"
 	"github.com/lib/pq"
 )
@@ -21,39 +20,7 @@ type Projet struct {
     Status      string   `json:"status"`
 }
 
-// 1. LISTER LES projets (Corrigé pour correspondre à la logique véhicules)
-func (e *Env) ListeProjets(w http.ResponseWriter, r *http.Request) {
-	query := `
-        SELECT p.id, p.name, p.description, p.status, 
-               COALESCE(array_agg(pi.url) FILTER (WHERE pi.url IS NOT NULL), '{}')
-        FROM projets p
-        LEFT JOIN projet_images pi ON p.id = pi.projet_id
-        GROUP BY p.id`
-
-	rows, err := e.DB.Query(query)
-	if err != nil {
-		log.Printf("Erreur Query: %v", err)
-		http.Error(w, "Erreur lecture DB", 500)
-		return
-	}
-	defer rows.Close()
-
-	var listeDeProjets []Projet
-	for rows.Next() {
-		var p Projet
-		err := rows.Scan(&p.ID, &p.Name, &p.Description, &p.Status, pq.Array(&p.Images))
-		if err != nil {
-			log.Printf("Erreur Scan: %v", err)
-			continue
-		}
-		listeDeProjets = append(listeDeProjets, p)
-	}
-
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(listeDeProjets)
-}
-
-// 2. AJOUTER UN Projet (Copié de la logique AjouterVehicule qui fonctionne)
+// 1. AJOUTER UN Projet (Copié de la logique AjouterVehicule qui fonctionne)
 func (e *Env) AjouterProjet(w http.ResponseWriter, r *http.Request) {
 	r.ParseMultipartForm(10 << 20)
 
@@ -88,13 +55,13 @@ func (e *Env) AjouterProjet(w http.ResponseWriter, r *http.Request) {
 			Bucket: &e.Bucket,
 			Key:    &fileName,
 			Body:   file,
-			ACL:    "public-read", // On remet l'ACL qui fonctionne sur les véhicules
+			ACL:    "public-read",
 		})
 		file.Close()
 
 		if err == nil {
 			imageURL := fmt.Sprintf("%s/%s/%s", endpoint, e.Bucket, fileName)
-			_, err = e.DB.Exec("INSERT INTO projet_images (projet_id, url) VALUES ($1, $2)", projetID, imageURL)
+			_, err = e.DB.Exec("INSERT INTO projets-images (projet_id, url) VALUES ($1, $2)", projetID, imageURL)
 			if err != nil {
 				log.Printf("Erreur SQL Image: %v", err)
 			}
@@ -145,7 +112,7 @@ func (e *Env) AjouterProjet(w http.ResponseWriter, r *http.Request) {
 
 	if err == nil {
 		imageURL := fmt.Sprintf("https://t3.storageapi.dev/%s/%s", e.Bucket, fileName)
-		e.DB.Exec("INSERT INTO projets_images (projet_id, url) VALUES ($1, $2)", projetID, imageURL)
+		e.DB.Exec("INSERT INTO projets-images (projet_id, url) VALUES ($1, $2)", projetID, imageURL)
 	}
 
 	w.WriteHeader(http.StatusCreated)
