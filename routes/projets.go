@@ -89,12 +89,12 @@ func (e *Env) AjouterProjet(w http.ResponseWriter, r *http.Request) {
 		Bucket:      &e.Bucket,
 		Key:         &fileName,
 		Body:        file,
-		ContentType: aws.String(header.Header.Get("Content-Type")),
+		ACL:    "public-read",
 	})
 
 	if err == nil {
 		imageURL := fmt.Sprintf("https://t3.storageapi.dev/%s/%s", e.Bucket, fileName)
-		e.DB.Exec("INSERT INTO projet_images (projet_id, url) VALUES ($1, $2)", projetID, imageURL)
+		e.DB.Exec("INSERT INTO projets_images (projet_id, url) VALUES ($1, $2)", projetID, imageURL)
 	}
 
 	w.WriteHeader(http.StatusCreated)
