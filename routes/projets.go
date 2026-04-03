@@ -1,15 +1,5 @@
 package routes
 
-type Projet struct {
-    ID          int      `json:"id"`
-    Name        string   `json:"name"`
-    Description string   `json:"description"`
-    Images      []string `json:"images"` 
-    Status      string   `json:"status"`
-}
-
-package routes
-
 import (
 	"encoding/json"
 	"fmt"
@@ -22,6 +12,14 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/s3"
 	"github.com/lib/pq"
 )
+
+type Projet struct {
+    ID          int      `json:"id"`
+    Name        string   `json:"name"`
+    Description string   `json:"description"`
+    Images      []string `json:"images"` 
+    Status      string   `json:"status"`
+}
 
 // 1. LISTER LES projets (Corrigé pour correspondre à la logique véhicules)
 func (e *Env) ListeProjets(w http.ResponseWriter, r *http.Request) {
