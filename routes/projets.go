@@ -25,7 +25,7 @@ func (e *Env) ListeProjets(w http.ResponseWriter, r *http.Request) {
         SELECT p.id, p.name, p.description, p.status, 
                COALESCE(array_agg(pi.url) FILTER (WHERE pi.url IS NOT NULL), '{}')
         FROM projets p
-        LEFT JOIN projet_images pi ON p.id = pi.projet_id
+        LEFT JOIN projets_images pi ON p.id = pi.projet_id
         GROUP BY p.id`
 
 	rows, err := e.DB.Query(query)
