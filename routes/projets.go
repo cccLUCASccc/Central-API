@@ -73,6 +73,12 @@ func (e *Env) ListeProjets(w http.ResponseWriter, r *http.Request) {
 
 // 2. AJOUTER UN PROJET
 func (e *Env) AjouterProjet(w http.ResponseWriter, r *http.Request) {
+	
+	if r.Method != http.MethodPost {
+        http.Error(w, "Seul le POST est autorisé ici", http.StatusMethodNotAllowed)
+        return
+    }
+
     r.ParseMultipartForm(10 << 20)
 
     name := r.FormValue("name")
