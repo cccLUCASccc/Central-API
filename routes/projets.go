@@ -99,17 +99,24 @@ func (e *Env) AjouterProjet(w http.ResponseWriter, r *http.Request) {
         return
     }
 
+    // --- PARTIE IMAGES AVEC LOGS DE PRÉCISION ---
     files := r.MultipartForm.File["image"]
+    
+    // Log pour vérifier si Go voit tes fichiers
+    log.Printf("Nombre d'images reçues : %d", len(files))
+
     endpoint := os.Getenv("AWS_ENDPOINT_URL")
 
     for _, header := range files {
         file, err := header.Open()
         if err != nil {
+            log.Printf("Erreur ouverture fichier : %v", err)
             continue
         }
 
         fileName := fmt.Sprintf("%d-%s", time.Now().Unix(), header.Filename)
 
+        // Upload vers S3
         _, err = e.S3Client.PutObject(r.Context(), &s3.PutObjectInput{
             Bucket: &e.Bucket,
             Key:    &fileName,
@@ -118,13 +125,24 @@ func (e *Env) AjouterProjet(w http.ResponseWriter, r *http.Request) {
         })
         file.Close()
 
-        if err == nil {
-            imageURL := fmt.Sprintf("%s/%s/%s", endpoint, e.Bucket, fileName)
-            // Correction ici : projet_images au lieu de projets-images
-            _, err = e.DB.Exec("INSERT INTO projets-images (projet_id, url) VALUES ($1, $2)", projetID, imageURL)
-            if err != nil {
-                log.Printf("Erreur SQL Image: %v", err)
-            }
+        if err != nil {
+            // SI L'UPLOAD ECHOUE, ON VEUT SAVOIR POURQUOI
+            log.Printf("ÉCHEC Upload S3 (%s) : %v", fileName, err)
+            continue
+        }
+
+        // Si on arrive ici, l'upload S3 a réussi
+        imageURL := fmt.Sprintf("%s/%s/%s", endpoint, e.Bucket, fileName)
+        
+        // Log pour vérifier l'URL générée
+        log.Printf("Insertion en DB de l'URL : %s", imageURL)
+
+        _, err = e.DB.Exec("INSERT INTO projet_images (projet_id, url) VALUES ($1, $2)", projetID, imageURL)
+        if err != nil {
+            // SI L'INSERTION ECHOUE
+            log.Printf("ÉCHEC SQL Image : %v", err)
+        } else {
+            log.Printf("IMAGE AJOUTÉE AVEC SUCCÈS EN DB")
         }
     }
 
