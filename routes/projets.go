@@ -24,34 +24,32 @@ type Projet struct {
 // 1. LISTER LES PROJETS
 func (e *Env) ListeProjets(w http.ResponseWriter, r *http.Request) {
     query := `
-        SELECT p.id, p.name, p.description, p.status, 
+        SELECT p.id, p.name, COALESCE(p.description, ''), p.status, 
                COALESCE(array_agg(pi.url) FILTER (WHERE pi.url IS NOT NULL), '{}')
         FROM projets p
         LEFT JOIN projet_images pi ON p.id = pi.projet_id
-        GROUP BY p.id`
+        GROUP BY p.id, p.name, p.description, p.status`
 
     rows, err := e.DB.Query(query)
     if err != nil {
-        log.Printf("Erreur Query ListeProjets: %p", err)
+        log.Printf("Erreur Query ListeProjets: %v", err) // %v au lieu de %p
         http.Error(w, "Erreur lecture DB", 500)
         return
     }
     defer rows.Close()
 
-    var liste_de_projets []Projet
+    liste_de_projets := []Projet{}
     
     for rows.Next() {
         var p Projet
-        // Le scan doit correspondre exactement au SELECT ci-dessus
         err := rows.Scan(&p.ID, &p.Name, &p.Description, &p.Status, pq.Array(&p.Images))
         if err != nil {
-            log.Printf("Erreur Scan Projet: %p", err)
+            log.Printf("🚨 Erreur Scan Projet : %v", err)
             continue
         }
         liste_de_projets = append(liste_de_projets, p)
     }
 
-    // Gestion des URLs présignées (Optionnel si tes images sont publiques)
     presignClient := s3.NewPresignClient(e.S3Client)
     for i := range liste_de_projets {
         for j, url := range liste_de_projets[i].Images {
