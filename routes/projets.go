@@ -7,6 +7,7 @@ import (
     "net/http"
     "os"
     "time"
+	"strconv"
 
     "github.com/aws/aws-sdk-go-v2/service/s3"
     "github.com/lib/pq"
@@ -22,7 +23,6 @@ type Projet struct {
 
 // 1. LISTER LES PROJETS
 func (e *Env) ListeProjets(w http.ResponseWriter, r *http.Request) {
-    // Correction ici : on sélectionne les bonnes colonnes de projets
     query := `
         SELECT p.id, p.name, p.description, p.status, 
                COALESCE(array_agg(pi.url) FILTER (WHERE pi.url IS NOT NULL), '{}')
@@ -77,7 +77,9 @@ func (e *Env) AjouterProjet(w http.ResponseWriter, r *http.Request) {
 
     name := r.FormValue("name")
     desc := r.FormValue("description")
-    status := r.FormValue("status")
+
+    statusStr := r.FormValue("status")
+	status, _ := strconv.Atoi(statusStr)
 
     var projetID int
     // On s'assure que la table s'appelle 'projets' et les colonnes 'name', 'description', 'status'
