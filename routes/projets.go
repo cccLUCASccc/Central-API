@@ -73,7 +73,7 @@ func (e *Env) ListeProjets(w http.ResponseWriter, r *http.Request) {
 
 // 2. AJOUTER UN PROJET
 func (e *Env) AjouterProjet(w http.ResponseWriter, r *http.Request) {
-	
+
 	if r.Method != http.MethodPost {
         http.Error(w, "Seul le POST est autorisé ici", http.StatusMethodNotAllowed)
         return
@@ -121,7 +121,7 @@ func (e *Env) AjouterProjet(w http.ResponseWriter, r *http.Request) {
         if err == nil {
             imageURL := fmt.Sprintf("%s/%s/%s", endpoint, e.Bucket, fileName)
             // Correction ici : projet_images au lieu de projets-images
-            _, err = e.DB.Exec("INSERT INTO projet_images (projet_id, url) VALUES ($1, $2)", projetID, imageURL)
+            _, err = e.DB.Exec("INSERT INTO projets-images (projet_id, url) VALUES ($1, $2)", projetID, imageURL)
             if err != nil {
                 log.Printf("Erreur SQL Image: %v", err)
             }
