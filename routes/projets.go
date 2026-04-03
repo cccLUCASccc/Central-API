@@ -32,7 +32,7 @@ func (e *Env) ListeProjets(w http.ResponseWriter, r *http.Request) {
 
     rows, err := e.DB.Query(query)
     if err != nil {
-        log.Printf("Erreur Query ListeProjets: %v", err)
+        log.Printf("Erreur Query ListeProjets: %p", err)
         http.Error(w, "Erreur lecture DB", 500)
         return
     }
@@ -45,7 +45,7 @@ func (e *Env) ListeProjets(w http.ResponseWriter, r *http.Request) {
         // Le scan doit correspondre exactement au SELECT ci-dessus
         err := rows.Scan(&p.ID, &p.Name, &p.Description, &p.Status, pq.Array(&p.Images))
         if err != nil {
-            log.Printf("Erreur Scan Projet: %v", err)
+            log.Printf("Erreur Scan Projet: %p", err)
             continue
         }
         liste_de_projets = append(liste_de_projets, p)
